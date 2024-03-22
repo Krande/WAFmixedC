@@ -1,0 +1,72 @@
+from waflib import Configure, Errors, Logs, Utils
+
+import platform
+
+def get_cpu_vendor():
+    """Get CPU vendor."""
+    if 'AMD' in platform.processor():
+        return 'AMD'
+    elif 'Intel' in platform.processor():
+        return 'Intel'
+    else:
+        return 'Unknown'
+def options(self):
+    self.load("compiler_fc")
+
+
+def configure(self):
+    self.load("compiler_fc")
+
+def build(self):
+    env = self.all_envs[self.variant]
+    get_srcs = self.path.get_src().ant_glob
+    use = ["BIBFOR"]
+    if self.env.BUILD_OPENMP:
+        use.append("OPENMP")
+    srcF90 = get_srcs("**/*.F90")
+    self(
+        features="fc fcshlib",
+        name="asterbibfor",
+        target="bibfor",
+        source=srcF90,
+        use=use,
+        env=env.derive(),
+        install_path=env.ASTERLIBDIR,
+    )
+
+@Configure.conf
+def check_fortran_compiler_flags(self):
+    if "gfortran" in self.env.FC_NAME.lower():
+        self.check_fortran_compiler_options("-fPIC")
+        if "64" in self.env.DEST_CPU:
+            flags = ["-fdefault-%s-%i" % (name, 8) for name in ("double", "integer", "real")]
+            self.check_fortran_compiler_options(flags)
+        self.check_fortran_compiler_options("-Wimplicit-interface")
+        self.check_fortran_compiler_options("-Wintrinsic-shadow")
+        self.check_fortran_compiler_options("-fno-aggressive-loop-optimizations")
+        # long lines after preprocessing
+        self.check_fortran_compiler_options("-ffree-line-length-none")
+
+    if "ifort" in self.env.FC_NAME.lower():
+        if self.env.CC_NAME.lower() == "msvc":
+            self.check_fortran_compiler_options(["/fpe:0", "/traceback"])
+        else:
+            self.check_fortran_compiler_options(["-fpe0", "-traceback"])
+        if "64" in self.env.DEST_CPU:
+            if self.env.CC_NAME.lower() == "msvc":
+                self.check_fortran_compiler_options(["/nologo", "/real-size:64", "-i8", "/names:lowercase", "/MD"])
+            else:
+                self.check_fortran_compiler_options(["-i8", "-r8"])
+
+        # Check if intel CPU
+        cpu_vendor = get_cpu_vendor()
+        Logs.info(f"Using {cpu_vendor} CPU")
+        if cpu_vendor == 'Intel':
+            self.check_fortran_compiler_options(["/QxCORE-AVX2"])
+        # all Intel specific features must use:
+        #   ASTER_HAVE_INTEL_IFORT && ASTER_HAVE_xxx
+        # this marker must be specified on command line (using -D)
+        # because it must not be enabled by aslint
+        self.env.append_unique("DEFINES", "ASTER_HAVE_INTEL_IFORT")
+    self.start_msg("Fortran compiler flags")
+    self.end_msg(self.env["FCFLAGS"])

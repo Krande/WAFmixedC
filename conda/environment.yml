@@ -1,0 +1,9 @@
+name: mixC
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - waf
+  - clang 18.1.1
+  - clangxx 18.1.1
+#  - lld 18.1.1
