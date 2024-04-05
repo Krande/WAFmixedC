@@ -12,6 +12,11 @@ clang-cl /FS /MD /nologo /Zi /Od /I.\\bibcxx /I.\\bibc\\include .\\bibc\\c_wrapp
 REM create shared libraries first of each project
 REM fortran
 
+REM linking C (ie. create a .dll and .lib)
+link /nologo /MANIFEST /subsystem:console "/IMPLIB:bibc\\bibc.lib" /DLL build\\c_wrapper.c.1.o /OUT:build\\bibc.dll /DEBUG
 
-REM linking
-link /nologo /out:build\\main.exe build\\fortran_code.F90.1.o build\\cpp_code.cxx.2.o build\\c_wrapper.c.1.o
+REM linking Fortran (ie. create a .dll and .lib)
+link /nologo /MANIFEST /subsystem:console "/IMPLIB:bibfor\\bibfor.lib" /DLL build\\fortran_code.F90.1.o /OUT:build\\bibfor.dll /DEBUG
+
+REM linking C++ (ie. create a .dll and .lib)
+link /nologo /MANIFEST /subsystem:console "/IMPLIB:bibcxx\\bibcxx.lib" /DLL build\\cpp_code.cxx.2.o /OUT:build\\bibcxx.dll /DEBUG
